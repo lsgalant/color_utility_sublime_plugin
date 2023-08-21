@@ -5,7 +5,7 @@
         "children":
         [
             {
-                "command": "test"
+                "command": "Test"
             },
             {
                 "command": "color"

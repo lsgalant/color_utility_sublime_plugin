@@ -1,0 +1,15 @@
+{
+	"variables":
+	{
+	},
+	"globals":
+	{
+	},
+	"rules":
+	[
+		{
+			"scope": "hsl_20_20_20",
+			"background": "hsl(20,20%,20%)"
+		},
+	]
+}

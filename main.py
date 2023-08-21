@@ -4,6 +4,7 @@ import os
 import re
 import logging
 import sys
+import subprocess
 
 # hex_rgb = ''
 
@@ -44,9 +45,9 @@ class c_d_event_listenter(sublime_plugin.ViewEventListener):
 
 		if len(packet_a_hsl[0]) > 0:
 			packet_b_hsl = make_packet_b_hsl(packet_a_hsl)
-			# print(packet_b_hsl)
 			update_scope(packet_b_hsl, view, scheme)
-			update_scheme_mod(packet_b_hsl, scheme)
+			update_mod(packet_b_hsl, scheme)
+
 
 	def make_packet_a_hsl(self, view):
 
@@ -55,34 +56,36 @@ class c_d_event_listenter(sublime_plugin.ViewEventListener):
 			packet_a_hsl = (regions, extracts)
 			return(packet_a_hsl)
 
+
 class c_d_text_change_listener(sublime_plugin.TextChangeListener):
 
 
 	def on_text_changed_async(self, changes):
-		current_scheme = sublime.ui_info()['color_scheme']['value']
-
-		active_window = sublime.active_window()
-		active_view = active_window.active_view()
 		
-		# raw_packet = self.search_line(active_view)
+		scheme = sublime.ui_info()['color_scheme']['value']
 
-		# if len(raw_packet[0]) > 0:
-			# data_packet = make_data_packet(raw_packet)
-			# print(data_packet)
-			# update_scope(data_packet, active_view, current_scheme)
-			# update_scheme_mod(data_packet, current_scheme)
+		window = sublime.active_window()
+		view = window.active_view()
+		
+		# packet_a = self.search_line(view)
+
+		# if len(packet_a[0]) > 0:
+			# packet_b = make_packet_b(packet_a)
+			# print(packet_b)
+			# update_scope(packet_b, view, scheme)
+			# update_mod(packet_b, scheme)
 
 
-	def search_line(self, active_view):
-		selection = active_view.sel()
-		region = selection[0]
-		line = active_view.line(region)
+	def search_line(self, view):
+		sel = view.sel()
+		region = sel[0]
+		line = view.line(region)
 
-		words = active_view.substr(line)
+		words = view.substr(line)
 		comp = re.compile(r"(\()(.*[0-9])(,)(.*[0-9])(,)(.*[0-9].*)(\))")
 		results = comp.findall(str(words))
 
-		raw_packet = ([], [])
+		packet_a = ([], [])
 
 		if len(results) > 0:
 			regions = []
@@ -98,9 +101,9 @@ class c_d_text_change_listener(sublime_plugin.TextChangeListener):
 				region = sublime.Region(region_start, region_end)
 				regions.append(region)
 
-			raw_packet = (regions, extracts)
+			packet_a = (regions, extracts)
 
-		return(raw_packet)
+		return(packet_a)
 
 
 def make_packet_b_hsl(packet_a_hsl):
@@ -145,9 +148,12 @@ def update_scope(packet_b, view, scheme):
 	regions = packet_b[2]
 
 	for(scope, region) in zip(scopes, regions):
-		idx = mod_contents.find(scope)
-
-		if idx == -1:
+		# idx = mod_contents.find(scope)
+		# print('p')
+		matches = view.get_regions(scope)
+		# print(idx)
+		if len(matches) == 0:
+			print('added_new_scope')
 			view.add_regions(scope, [region], scope)
 
 
@@ -169,9 +175,9 @@ def update_mod(packet_b, scheme):
 
 	if len(packet_b) > 0:
 		mod_contents += '\n\t]\n}'
-
-		with open(mode_path, 'w') as mod_file:
-			mode_file.write(mod_contents)
+		# print(mod_contents)
+		with open(mod_path, 'w') as mod_file:
+			mod_file.write(mod_contents)
 
 
 def get_mod_contents(mod_path):
@@ -185,7 +191,51 @@ def make_mod_file(mod_path):
 
 	with open(mod_path, 'w') as mod_file:
 		boiler = '{\n\t"variables":\n\t{\n\t},\n\t"globals":\n\t{\n\t},\n\t"rules":\n\t[\n\t]\n}'
-		file.write(boiler)
+		mod_file.write(boiler)
+
+
+class TestCommand(sublime_plugin.TextCommand):
+
+	def run(self, edit):
+
+		args = self.search_selection()
+
+		if args == 'No match':
+			print(args)
+
+		else:
+			please_colors_path = 'C:\\Users\\lucas\\Dropbox\\git\\please_colors'
+			command = 'pythonw ' + please_colors_path + '\\main.py ' + '-' + str(args[0]) + ' -' + str(args[1]) + ' -' + args[2]
+			print(command)
+			subprocess.Popen(command)
+			# view = self.view
+			print('Please Colors opened')
+
+	def search_selection(self):
+
+		window = sublime.active_window()
+		view = window.active_view()
+		sel = view.sel()
+		region = sel[0]
+		line = view.line(region)
+		words = view.substr(line)
+
+		hsl_exp_a = re.compile('(hsl\()([0-3][0-9][0-9]|[0-9]?[0-9])(, ?)(100|\d{1,2})(%, ?)(100|\d{1,2})(%\))')
+		instances = hsl_exp_a.findall(str(words))
+
+		if len(instances) > 0:
+			
+			args = (str(float(instances[0][1] / 360)), str(float(instances[0][3])), str(float(instances[0][5])))
+			return(args)
+
+		else:
+			return('No match')
+
+		# scope = view.extract_scope(region.a)
+		# scope_name = view.scope_name(region.a)
+		# print(scope_name)
+		# print(region)
+		# print(scope)
 
 
 class ExampleCommand(sublime_plugin.TextCommand):

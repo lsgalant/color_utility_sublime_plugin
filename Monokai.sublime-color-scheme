@@ -12,104 +12,12 @@
 			"background": "hsl(20,20%,20%)"
 		},
 		{
-			"scope": "hsl_0_30_50",
-			"background": "hsl(0,30%,50%)"
-		},
-		{
-			"scope": "hsl_80_30_50",
-			"background": "hsl(80,30%,50%)"
-		},
-		{
-			"scope": "hsl_70_30_70",
-			"background": "hsl(70,30%,70%)"
-		},
-		{
-			"scope": "hsl_250_20_60",
-			"background": "hsl(250,20%,60%)"
-		},
-		{
-			"scope": "hsl_30_30_60",
-			"background": "hsl(30,30%,60%)"
-		},
-		{
-			"scope": "hsl_0_9_45",
-			"background": "hsl(0,9%,45%)"
-		},
-		{
-			"scope": "hsl_40_19_70",
-			"background": "hsl(40,19%,70%)"
-		},
-		{
-			"scope": "hsl_40_5_70",
-			"background": "hsl(40,5%,70%)"
-		},
-		{
-			"scope": "hsl_20_15_15",
-			"background": "hsl(20,15%,15%)"
-		},
-		{
-			"scope": "hsl_2_20_70",
-			"background": "hsl(2,20%,70%)"
+			"scope": "hsl_35_42_25",
+			"background": "hsl(35,42%,25%)"
 		},
 		{
 			"scope": "hsl_20_20_40",
 			"background": "hsl(20,20%,40%)"
-		},
-		{
-			"scope": "hsl_200_80_20",
-			"background": "hsl(200,80%,20%)"
-		},
-		{
-			"scope": "hsl_30_40_70",
-			"background": "hsl(30,40%,70%)"
-		},
-		{
-			"scope": "hsl_360_30_50",
-			"background": "hsl(360,30%,50%)"
-		},
-		{
-			"scope": "hsl_215_60_50",
-			"background": "hsl(215,60%,50%)"
-		},
-		{
-			"scope": "hsl_0_0_38",
-			"background": "hsl(0,0%,38%)"
-		},
-		{
-			"scope": "hsl_0_0_25",
-			"background": "hsl(0,0%,25%)"
-		},
-		{
-			"scope": "hsl_0_90_100",
-			"background": "hsl(0,90%,100%)"
-		},
-		{
-			"scope": "hsl_0_30_10",
-			"background": "hsl(0,30%,10%)"
-		},
-		{
-			"scope": "hsl_10_40_70",
-			"background": "hsl(10,40%,70%)"
-		},
-		{
-			"scope": "hsl_10_20_60",
-			"background": "hsl(10,20%,60%)"
-		},
-		{
-			"scope": "hsl_10_20_15",
-			"background": "hsl(10,20%,15%)"
-		},
-		{
-			"scope": "hsl_19_27_18",
-			"background": "hsl(19,27%,18%)"
-		},
-		{
-			"scope": "hsl_31_32_80",
-			"background": "hsl(31,32%,80%)"
-		},
-		{
-			"scope": "hsl_20_20_80",
-			"background": "hsl(20,20%,80%)"
 		},
 	]
 }
