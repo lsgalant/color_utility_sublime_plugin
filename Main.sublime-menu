@@ -1,0 +1,15 @@
+[
+    {
+        "caption": "my_plugin",
+        "id": "my_plugin",
+        "children":
+        [
+            {
+                "command": "test"
+            },
+            {
+                "command": "color"
+            }
+        ]
+    }
+]
