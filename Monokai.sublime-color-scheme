@@ -8,16 +8,64 @@
 	"rules":
 	[
 		{
-			"scope": "hsl_20_20_20",
-			"background": "hsl(20,20%,20%)"
+			"scope": "hsl_[200, 50, 50]",
+			"background": "hsl(200, 50%, 50%)"
 		},
 		{
-			"scope": "hsl_35_42_25",
-			"background": "hsl(35,42%,25%)"
+			"scope": "hsl_[45, 28, 20]",
+			"background": "hsl(45, 28%, 20%)"
 		},
 		{
-			"scope": "hsl_20_20_40",
-			"background": "hsl(20,20%,40%)"
+			"scope": "hsl_[95, 28, 20]",
+			"background": "hsl(95, 28%, 20%)"
+		},
+		{
+			"scope": "hsl_[75, 28, 20]",
+			"background": "hsl(75, 28%, 20%)"
+		},
+		{
+			"scope": "hsl_[65, 28, 20]",
+			"background": "hsl(65, 28%, 20%)"
+		},
+		{
+			"scope": "hsl_[15, 28, 20]",
+			"background": "hsl(15, 28%, 20%)"
+		},
+		{
+			"scope": "hsl_[25, 28, 20]",
+			"background": "hsl(25, 28%, 20%)"
+		},
+		{
+			"scope": "hsl_[25, 48, 20]",
+			"background": "hsl(25, 48%, 20%)"
+		},
+		{
+			"scope": "hsl_[45, 48, 20]",
+			"background": "hsl(45, 48%, 20%)"
+		},
+		{
+			"scope": "hsl_[35, 48, 20]",
+			"background": "hsl(35, 48%, 20%)"
+		},
+		{
+			"scope": "hsl_[65, 48, 20]",
+			"background": "hsl(65, 48%, 20%)"
+		},
+		{
+			"scope": "hsl_[15, 48, 20]",
+			"background": "hsl(15, 48%, 20%)"
+		},
+		{
+			"scope": "hsl_(15.0, 100.0, 20.0)",
+			"background": "hsl(15.0, 100.0%, 20.0%)"
+		},
+		{
+			"scope": "hsl_(15.0, 48.0, 76.89393939393939)",
+			"background": "hsl(15.0, 48.0%, 76.89393939393939%)"
+		},
+		{
+			"scope": "hsl_(15.0, 48.0, 20.0)",
+			"background": "hsl(15.0, 48.0%, 20.0%)"
 		},
 	]
 }
