@@ -5,45 +5,7 @@ import re
 import logging
 import sys
 import subprocess
-
-hex_rgb = ''
-
-hex_rgba = ''
-
-rgb_functional = ''
-
-rgba_functopnal = ''
-
-hsl_a = ''
-hsl_a += '(hsl\()'
-hsl_a += '([0-3][0-9][0-9]|[0-9]?[0-9])'
-hsl_a += '(, ?)'
-hsl_a += '(100|\d{1,2})'
-hsl_a += '(%, ?)'
-hsl_a += '(100|\d{1,2})'
-hsl_a += '(%\))'
-
-hsl_functional_notag = ''
-
-hsla_functional = ''
-
-hwb_functional = ''
-
-no_type_3 = ''
-no_type_3 += '(\()'
-no_type_3 += '([0-2][0-5]{2}|\d{1,2})'
-no_type_3 += '(\.\d+)?'
-no_type_3 += '(, ?)'
-no_type_3 += '([0-1]00|\d{1,2})'
-no_type_3 += '(\.\d+)?'
-no_type_3 += '(\.\d+)?'
-no_type_3 += '(, ?)'
-no_type_3 += '([0-1]00|\d{1,2})'
-no_type_3 += '(\.\d+)?'
-no_type_3 += '(\.\d+)?'
-no_type_3 += '\)'
-
-no_type_4 = ''
+import please_colors_highlight.regular_expressions as regexes
 
 
 class viewEventListenter(sublime_plugin.ViewEventListener):
@@ -53,30 +15,47 @@ class viewEventListenter(sublime_plugin.ViewEventListener):
 		path = get_mod_path()
 
 		if os.path.isfile(path) == False:
-			
+
 			make_mod(path)
 
-		extracts = []
-		regions = self.view.find_all(hsl_a, 0, '[$2, $4, $6]', extracts)
+		phrases = []
+		regions = self.view.find_all(regexes.hsl_a, 0, '$0', phrases)
 
-		update(extracts, regions, self.view)
+		if len(phrases) > 0:
+
+			data = make_data(phrases)
+
+			scopes = make_scopes(data)
+
+			update_scope(phrases, scopes, regions, self.view)
+
+			update_mod(phrases, scopes)
 
 
 	def on_hover(self, pt, zone):
 
 		line = self.view.line(pt)
+
 		substr = self.view.substr(line)
 
-		regex = re.compile(hsl_a)
-		matches = regex.findall(substr)
+		phrases, regions = search_line(line, self.view)
 
-		if len(matches) > 0:
+		if len(phrases) == 1:
 
-			html = "<a href='subl:popup_handler {\"view\": "
-			html += "{0}, \"pt\": {1}".format(self.view.id(), pt)
-			html += "}'>Change Color</a>"
+			datum = make_data(phrases)[0]
 
-			# show popup at mouse location
+			region = str(regions[0])
+
+			args = {
+				"datum": datum,
+				"region": region,
+				"view_id": self.view.id()
+			}
+
+			cmd = sublime.command_url('popup_handler', args)
+
+			html = '<a href=\"{0}\">Edit Color</a>'.format(cmd)
+			
 			self.view.show_popup(html, 0, pt)
 
 
@@ -85,41 +64,184 @@ class textChangeListener(sublime_plugin.TextChangeListener):
 	def on_text_changed_async(self, changes):
 
 		view = sublime.active_window().active_view()
+
 		region = view.sel()
+
 		line = view.line(region[0])
 
-		extracts, regions = search_line(view, line)
-		# print(extracts, regions)
-		update(extracts, regions, view)
+		phrases, regions = search_line(line, view)
+
+		if len(phrases) > 0:
+
+			data = make_data(phrases)
+
+			scopes = make_scopes(data)
+
+			update_scope(phrases, scopes, regions, view)
+
+			update_mod(phrases, scopes)
 
 
 class popupHandlerCommand(sublime_plugin.TextCommand):
 
-	def run(self, edit, view, pt):
+	def run(self, edit, datum, region, view_id):
 
-		line = sublime.View(view).line(pt)
+		args = ['pythonw', 'C:\\Users\\lucas\\Dropbox\\git\\please_colors\\main.py', str(datum)]
 
-		extracts, regions = search_line(sublime.View(view), line)
+		proc = subprocess.check_output(args, universal_newlines=True)
+		# proc = proc.split('\n')
 
-		iterations = len(extracts)
+		# print(proc)
 
-		if iterations == 1:
+		try:
+	
+			datum[1] = eval(proc)
 
-			color_in = extracts[0]
+			for i in range(len(datum[1])):
 
-			args = ['python', 'C:\\Users\\lucas\\Dropbox\\git\\please_colors\\main.py', '-s', color_in]
+				datum[1][i] = round(datum[1][i], 3)
 
-			proc = subprocess.check_output(args, universal_newlines=True)
-			proc = proc.split('\n')
+			scopes = make_scopes([datum])
 
-			new_extracts = ['{0}, {1}, {2}'.format(proc[0], proc[1], proc[2])]
-			color_phrase = 'hsl({0}, {1}%, {2}%)'.format(proc[0], proc[1], proc[2])
-			print(color_phrase)
-			print(regions)
-			# print(view)
-			# print(sublime.View(view))
-			sublime.View(view).replace(edit, regions[0], color_phrase)
-			# update(new_extracts, regions, sublime.View(view))
+			phrase = '{0}({1}, {2}%, {3}%)'.format(datum[0], datum[1][0], datum[1][1], datum[1][2])
+
+			print(phrase)
+
+			region = eval(region)
+
+			region_a = sublime.Region(region[0], region[1])
+
+			view = sublime.View(view_id)
+
+			view.replace(edit, region_a, phrase)
+
+			region_b = sublime.Region(region[0], region[0] + len(phrase))
+
+			update_scope([phrase], scopes, [region_b], view)
+
+			update_mod([phrase], scopes)
+
+		except:
+
+			return
+
+def make_rules(phrases, scopes):
+
+	rules = []
+
+	for i in range(len(phrases)):
+
+		rule = '\n\t\t{{\n\t\t\t\"scope\": \"{0}'.format(scopes[i])
+		rule += '\",\n\t\t\t\"background\": \"{0}'.format(phrases[i])
+		rule += '\"\n\t\t},'
+
+		rules.append(rule)
+
+	return(rules)
+
+
+def make_data(phrases):
+
+	data = []
+
+	for phrase in phrases:
+
+		datum = ['', []]
+
+		phrase = phrase.split('(')
+
+		color_type = phrase[0]
+
+		datum[0] = color_type
+
+		nums = phrase[1]
+		nums = nums.replace(' ', '')
+		nums = nums.replace('%', '')
+		nums = nums.replace(')', '')
+		nums = nums.split(',')
+
+		for num in nums:
+
+			datum[1].append(float(num))
+
+		data.append(datum)
+
+	return(data)
+
+
+def make_scopes(data):
+
+	scopes = []
+
+	for datum in data:
+
+		scope = datum[0]
+
+		for num in datum[1]:
+
+			scope += '_' + str(num)
+
+		scopes.append(scope)
+
+	return scopes
+
+
+def update_scope(phrases, scopes, regions, view):
+
+	for i in range(len(phrases)):
+
+		existing_regions = view.get_regions(scopes[i])
+
+		if len(existing_regions) == 0:
+
+			view.add_regions(scopes[i], [regions[i]], scopes[i])
+
+
+def update_mod(phrases, scopes):
+
+	content = get_mod_content()[:-len('\n\t]\n}')]
+
+	rules = make_rules(phrases, scopes)
+
+	for i in range(len(phrases)):
+
+		idx = content.find(phrases[i])
+
+		if idx == -1:
+
+			content += rules[i]
+
+	content += '\n\t]\n}'
+
+	with open(get_mod_path(), 'w') as mod:
+
+		mod.write(content)
+
+
+def search_line(line, view):
+
+	substr = view.substr(line)
+
+	regex = re.compile(regexes.hsl_a)
+
+	instances = regex.findall(substr)
+
+	phrases = []
+	regions = []
+
+	for i in instances:
+
+		phrase = '{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}'.format(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10])
+
+		region_a = substr.find(phrase) + line.a
+		region_b = region_a + len(phrase)
+
+		region = sublime.Region(region_a, region_b)
+		
+		phrases.append(phrase)
+		regions.append(region)
+
+	return(phrases, regions)
 
 
 def make_mod():
@@ -131,113 +253,7 @@ def make_mod():
 		boiler += '\n\t"rules":\n\t[\n\t]\n}'
 		mod.write(boiler)
 
-
-def update(extracts, regions, view):
-	# print(extracts, regions)
-	iterations = len(extracts)
-
-	if iterations > 0:
-
-		for i in range(iterations):
-			extracts[i] = eval(extracts[i])
-
-		packet = make_packet('hsl', extracts, regions, iterations)
-		
-		update_scope(packet, view)
-		update_mod(packet)
-
-
-def make_packet(type, extracts, regions, instances):
-
-	packet = {
-		'instances': instances,
-		'type': type,
-		'colors': [],
-		'scopes': [],
-		'rules': [],
-		'regions': [],
-		'vals': []
-	}
-
-	for i in range(instances):
-
-		extract = extracts[i]
-		region = regions[i]
-
-
-		color = '{0}({1}, {2}%, {3}%)'.format(packet['type'], extract[0], extract[1], extract[2])
-
-		scope = 'hsl_{0}'.format(extract)
-
-		rule = '\n\t\t{{\n\t\t\t"scope": "{0}'.format(scope)
-		rule += '",\n\t\t\t"background": "{0}'.format(color)
-		rule += '"\n\t\t},'
-
-		packet['rules'].append(rule)
-		packet['colors'].append(color)
-		packet['scopes'].append(scope)
-		packet['regions'].append(region)
-
-	return(packet)
-
-
-def search_line(view, line):
-
-	substr = view.substr(line)
-
-	regex = re.compile(hsl_a)
-	matches = regex.findall(substr)
-	# print(matches)
-
-	extracts = []
-	regions = []
-
-	for match in matches:
-
-		extract_a = '{0}{1}{2}{3}{4}{5}{6}'.format(match[0], match[1], match[2], match[3], match[4], match[5], match[6])
-		extract_b = '[{0}, {1}, {2}]'.format(match[1], match[3], match[5])
-		extracts.append(extract_b)
-
-		region_a = substr.find(extract_a) + line.a
-		region_b = region_a + len(extract_a)
-		region = sublime.Region(region_a, region_b)
-		regions.append(region)
-
-	# print(regions)
-	return(extracts, regions)
-
-
-def update_scope(packet, view):
-
-	for i in range(packet['instances']):
-
-		scope = packet['scopes'][i]
-		matches = view.get_regions(scope)
-
-		if len(matches) == 0:
-
-			view.add_regions(scope, [packet['regions'][i]], scope)
-
-
-def update_mod(packet):
-
-	content = get_mod_contents()[:-len('\n\t]\n}')]
-
-	for i in range(packet['instances']):
-
-		idx = content.find(packet['scopes'][i])
-
-		if idx == -1:
-
-			content += packet['rules'][i]
-
-	if packet['instances'] > 0:
-
-		content += '\n\t]\n}'
-
-		with open(get_mod_path(), 'w') as mod:
-
-			mod.write(content)
+		print('New mod file created.')
 
 
 def get_mod_path():
@@ -249,7 +265,7 @@ def get_mod_path():
 	return(path)
 
 
-def get_mod_contents():
+def get_mod_content():
 
 	with open(get_mod_path(), 'r') as mod:
 
