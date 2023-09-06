@@ -1,4 +1,4 @@
-hex_rgb = ''
+hex_a = '(#)([[:xdigit:]]{6})'
 
 hex_rgba = ''
 

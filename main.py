@@ -5,7 +5,7 @@ import re
 import logging
 import sys
 import subprocess
-import please_colors_highlight.regular_expressions as regexes
+import please_colors_highlight.regexes as regexes
 
 
 class viewEventListenter(sublime_plugin.ViewEventListener):
@@ -18,18 +18,23 @@ class viewEventListenter(sublime_plugin.ViewEventListener):
 
 			make_mod(path)
 
-		phrases = []
-		regions = self.view.find_all(regexes.hsl_a, 0, '$0', phrases)
+		phrases_hsl = []
+		regions_hsl = self.view.find_all(regexes.hsl_a, 0, '$0', phrases_hsl)
 
-		if len(phrases) > 0:
+		if len(phrases_hsl) > 0:
 
-			data = make_data(phrases)
+			data_hsl = make_data(phrases_hsl)
 
-			scopes = make_scopes(data)
+			scopes_hsl = make_scopes(data_hsl)
 
-			update_scope(phrases, scopes, regions, self.view)
+			update_scope(phrases_hsl, scopes_hsl, regions_hsl, self.view)
 
-			update_mod(phrases, scopes)
+			update_mod(phrases_hsl, scopes_hsl)
+
+		phrases_hex = []
+		phrases_hex = self.view.find_all(regexes.hex_a, 0, '$0', phrases_hex)
+
+		print(phrases_hex)
 
 
 	def on_hover(self, pt, zone):
