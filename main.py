@@ -1,256 +1,166 @@
-import sublime
-import sublime_plugin
 import os
 import re
-import logging
 import sys
+import logging
+import sublime
 import subprocess
-import please_colors_highlight.regexes as regexes
+import sublime_plugin
+import color_utility_sublime_plugin.regexes as regexes
+import color_utility_sublime_plugin.cu_format as cu_format
+
+
+color_types = ['hsl', 'rgb_hex', 'notag_rgb_a']
 
 
 class viewEventListenter(sublime_plugin.ViewEventListener):
 
 	def on_activated(self):
-
 		path = get_mod_path()
-
 		if os.path.isfile(path) == False:
-
 			make_mod(path)
 
-		phrases_hsl = []
-		regions_hsl = self.view.find_all(regexes.hsl_a, 0, '$0', phrases_hsl)
+		for color_type in color_types: 
+			regex = eval('regexes.' + color_type)
+			phrases = []
+			regions = self.view.find_all(regex, 0, '$0', phrases)
 
-		if len(phrases_hsl) > 0:
-
-			data_hsl = make_data(phrases_hsl)
-
-			scopes_hsl = make_scopes(data_hsl)
-
-			update_scope(phrases_hsl, scopes_hsl, regions_hsl, self.view)
-
-			update_mod(phrases_hsl, scopes_hsl)
-
-		phrases_hex = []
-		phrases_hex = self.view.find_all(regexes.hex_a, 0, '$0', phrases_hex)
-
-		print(phrases_hex)
+			if 0 < len(phrases):
+				packet = cu_format.make_packet(color_type, phrases, regions)
+				uni_update(packet, self.view)
 
 
 	def on_hover(self, pt, zone):
-
-		line = self.view.line(pt)
-
+		line   = self.view.line(pt)
 		substr = self.view.substr(line)
 
-		phrases, regions = search_line(line, self.view)
+		for color_type in color_types:
+			packet = substr_search(color_type, line, substr)
 
-		if len(phrases) == 1:
+			if len(packet['phrases']) == 1:
+				args = {
+					"datum": packet['data'][0],
+					"region": str(packet['regions'][0]),
+					"view_id": self.view.id()
+				}
 
-			datum = make_data(phrases)[0]
-
-			region = str(regions[0])
-
-			args = {
-				"datum": datum,
-				"region": region,
-				"view_id": self.view.id()
-			}
-
-			cmd = sublime.command_url('popup_handler', args)
-
-			html = '<a href=\"{0}\">Edit Color</a>'.format(cmd)
-			
-			self.view.show_popup(html, 0, pt)
-
-
-class textChangeListener(sublime_plugin.TextChangeListener):
-
-	def on_text_changed_async(self, changes):
-
-		view = sublime.active_window().active_view()
-
-		region = view.sel()
-
-		line = view.line(region[0])
-
-		phrases, regions = search_line(line, view)
-
-		if len(phrases) > 0:
-
-			data = make_data(phrases)
-
-			scopes = make_scopes(data)
-
-			update_scope(phrases, scopes, regions, view)
-
-			update_mod(phrases, scopes)
+				cmd = sublime.command_url('popup_handler', args)
+				html = '<a href=\"{0}\">Edit Color</a>'.format(cmd)
+	
+				self.view.show_popup(html, 0, pt)
+				break
 
 
 class popupHandlerCommand(sublime_plugin.TextCommand):
 
 	def run(self, edit, datum, region, view_id):
-
-		args = ['pythonw', 'C:\\Users\\lucas\\Dropbox\\git\\please_colors\\main.py', str(datum)]
+		path = 'C:\\Users\\lucas\\Dropbox\\git\\color_utility\\main.py'
+		args = ['pythonw', path, str(datum)]
 
 		proc = subprocess.check_output(args, universal_newlines=True)
-		# proc = proc.split('\n')
 
-		# print(proc)
-
+		print(proc)
+		
 		try:
-	
-			datum[1] = eval(proc)
+			datum = eval(proc)
+			color_type = datum[0]
+			vals = datum[1]
 
-			for i in range(len(datum[1])):
+			phrase = ''
 
-				datum[1][i] = round(datum[1][i], 3)
+			if color_type == 'hsl':
+				phrase = '{0}({1}, {2}%, {3}%)'.format(color_type, vals[0], vals[1], vals[2])
 
-			scopes = make_scopes([datum])
+			elif color_type == 'rgb_hex':
+				phrase = '#{0}{1}{2}'.format(vals[0], vals[1], vals[2])
 
-			phrase = '{0}({1}, {2}%, {3}%)'.format(datum[0], datum[1][0], datum[1][1], datum[1][2])
+			elif color_type == 'notag_rgb_a':
+				r = str(vals[0])
+				g = str(vals[1])
+				b = str(vals[2])
+				if len(r) == 3:
+					r += '0'
+				if len(g) == 3:
+					g += '0'
+				if len(b) == 3:
+					b += '0'
+				phrase = '{0} {1} {2}'.format(r, g, b)
+				# print(r, g, b)
+
 
 			print(phrase)
+			if phrase != '':
+				view = sublime.View(view_id)
+				region = eval(region)
+				region_a = sublime.Region(region[0], region[1])
+				region_b = sublime.Region(region[0], region[0] + len(phrase))
 
-			region = eval(region)
+				packet = cu_format.make_packet(color_type, [phrase], [region_b])
 
-			region_a = sublime.Region(region[0], region[1])
+				view.replace(edit, region_a, phrase)
 
-			view = sublime.View(view_id)
-
-			view.replace(edit, region_a, phrase)
-
-			region_b = sublime.Region(region[0], region[0] + len(phrase))
-
-			update_scope([phrase], scopes, [region_b], view)
-
-			update_mod([phrase], scopes)
-
+				uni_update(packet, view)
 		except:
-
-			return
-
-def make_rules(phrases, scopes):
-
-	rules = []
-
-	for i in range(len(phrases)):
-
-		rule = '\n\t\t{{\n\t\t\t\"scope\": \"{0}'.format(scopes[i])
-		rule += '\",\n\t\t\t\"background\": \"{0}'.format(phrases[i])
-		rule += '\"\n\t\t},'
-
-		rules.append(rule)
-
-	return(rules)
+			return()
 
 
-def make_data(phrases):
+class textChangeListener(sublime_plugin.TextChangeListener):
 
-	data = []
+	def on_text_changed_async(self, changes):
+		view = sublime.active_window().active_view()
 
-	for phrase in phrases:
+		sel = view.sel()
+		line = view.line(sel[0])
+		substr = view.substr(line)
 
-		datum = ['', []]
+		# for color_type in color_types:
+		# 	packet = substr_search(color_type, line, substr)
 
-		phrase = phrase.split('(')
-
-		color_type = phrase[0]
-
-		datum[0] = color_type
-
-		nums = phrase[1]
-		nums = nums.replace(' ', '')
-		nums = nums.replace('%', '')
-		nums = nums.replace(')', '')
-		nums = nums.split(',')
-
-		for num in nums:
-
-			datum[1].append(float(num))
-
-		data.append(datum)
-
-	return(data)
+			# if 0 < len(packet['phrases']):
+			# 	uni_update(packet, view)
+			# 	break
 
 
-def make_scopes(data):
-
-	scopes = []
-
-	for datum in data:
-
-		scope = datum[0]
-
-		for num in datum[1]:
-
-			scope += '_' + str(num)
-
-		scopes.append(scope)
-
-	return scopes
-
-
-def update_scope(phrases, scopes, regions, view):
-
-	for i in range(len(phrases)):
-
-		existing_regions = view.get_regions(scopes[i])
-
-		if len(existing_regions) == 0:
-
-			view.add_regions(scopes[i], [regions[i]], scopes[i])
-
-
-def update_mod(phrases, scopes):
-
-	content = get_mod_content()[:-len('\n\t]\n}')]
-
-	rules = make_rules(phrases, scopes)
-
-	for i in range(len(phrases)):
-
-		idx = content.find(phrases[i])
-
-		if idx == -1:
-
-			content += rules[i]
-
-	content += '\n\t]\n}'
-
-	with open(get_mod_path(), 'w') as mod:
-
-		mod.write(content)
-
-
-def search_line(line, view):
-
-	substr = view.substr(line)
-
-	regex = re.compile(regexes.hsl_a)
-
-	instances = regex.findall(substr)
+def substr_search(color_type, line, substr):
+	regex = re.compile(eval('regexes.' + color_type))
+	matches = regex.findall(substr)
 
 	phrases = []
 	regions = []
 
-	for i in instances:
-
-		phrase = '{0}{1}{2}{3}{4}{5}{6}{7}{8}{9}{10}'.format(i[0], i[1], i[2], i[3], i[4], i[5], i[6], i[7], i[8], i[9], i[10])
-
-		region_a = substr.find(phrase) + line.a
-		region_b = region_a + len(phrase)
-
-		region = sublime.Region(region_a, region_b)
-		
+	for m in matches:
+		phrase_constructor = eval('cu_format.' + 'phrase_constructor_' + color_type)
+		phrase = eval(phrase_constructor)
 		phrases.append(phrase)
+
+		region_a = line.a + substr.find(phrase)
+		region_b = region_a + len(phrase)
+		region = sublime.Region(region_a, region_b)
 		regions.append(region)
 
-	return(phrases, regions)
+	packet = cu_format.make_packet(color_type, phrases, regions)
+	return(packet)
+
+
+def uni_update(packet, view):
+	rules = cu_format.make_rules(packet)
+
+	mod = get_mod()[:-len('\n\t]\n}')]
+
+	for i in range(len(packet['phrases'])):
+		existing_regions = view.get_regions(packet['scopes'][i])
+
+		if len(existing_regions) == 0:
+			view.add_regions(packet['scopes'][i], [packet['regions'][i]], packet['scopes'][i])
+			idx = mod.find(packet['phrases'][i])
+
+			if idx == -1:
+				mod += rules[i]
+
+	with open(get_mod_path(), 'w') as mod_file:
+		mod_file.write(mod + '\n\t]\n}')
 
 
 def make_mod():
-
 	with open(get_mod_path(), 'w') as mod:
 		
 		boiler = '{\n\t"variables":\n\t{\n\t},'
@@ -262,19 +172,17 @@ def make_mod():
 
 
 def get_mod_path():
-
-	path = '{0}\\please_colors_highlight\\{1}'.format(
+	path = '{0}\\color_utility_sublime_plugin\\{1}'.format(
 		sublime.packages_path(),
 		sublime.ui_info()['color_scheme']['value'])
 
 	return(path)
 
 
-def get_mod_content():
+def get_mod():
+	with open(get_mod_path(), 'r') as mod_file:
 
-	with open(get_mod_path(), 'r') as mod:
-
-		contents = mod.read()
-		return(contents)
+		mod = mod_file.read()
+		return(mod)
 
 
